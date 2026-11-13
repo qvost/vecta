@@ -30,7 +30,7 @@ inputs:
     default: 'false'
   viewer-url:
     description: Viewer URL for the compressed diff; set empty to omit the share URL.
-    default: https://vecta.dev
+    default: https://vecta-gate.vercel.app
   top-symbols:
     description: Maximum symbol changes shown in the Markdown report.
     default: '20'
