@@ -3,10 +3,12 @@ mod diff;
 mod elf_versions;
 mod gate;
 mod inspect;
+mod share;
 pub use diff::*;
 pub use gate::*;
 pub use inspect::*;
 use serde::{Deserialize, Serialize};
+pub use share::*;
 use std::collections::BTreeMap;
 
 pub const SCHEMA_VERSION: u32 = 1;

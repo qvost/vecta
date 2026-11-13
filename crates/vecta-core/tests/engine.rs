@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use std::{collections::BTreeMap, io::Read};
 use vecta_core::*;
 fn snapshot() -> Snapshot {
     Snapshot {
@@ -101,7 +102,26 @@ fn zero_sized_additions_are_preserved_and_architectures_rejected() {
     head.architecture = "Aarch64".into();
     assert!(compare(&base, &head).is_err());
 }
-
+#[test]
+fn share_payload_roundtrip_and_bound() {
+    let mut head = snapshot();
+    head.file_size = 140;
+    let diff = compare(&snapshot(), &head).unwrap();
+    let url = share_url(&diff, "https://example.com/view").unwrap();
+    assert!(url.len() <= MAX_SHARE_URL);
+    let compressed = URL_SAFE_NO_PAD
+        .decode(url.split_once("#z=").unwrap().1)
+        .unwrap();
+    let mut decoded = String::new();
+    flate2::read::DeflateDecoder::new(&compressed[..])
+        .read_to_string(&mut decoded)
+        .unwrap();
+    let value: serde_json::Value = serde_json::from_str(&decoded).unwrap();
+    assert_eq!(value["diff"]["file"]["delta"], 40);
+    assert_eq!(url, share_url(&diff, "https://example.com/view").unwrap());
+    assert!(share_url(&diff, "javascript:alert(1)").is_err());
+    assert!(share_url(&diff, &format!("https://example.com/{}", "a".repeat(9000))).is_err());
+}
 #[test]
 fn missing_abi_never_passes_abi_gate() {
     let mut head = snapshot();

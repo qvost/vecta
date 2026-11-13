@@ -1,3 +1,4 @@
+mod report;
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::{
@@ -36,13 +37,21 @@ enum Command {
 struct Comparison {
     base: PathBuf,
     head: PathBuf,
-    #[arg(long, value_enum, default_value = "json")]
+    #[arg(long, value_enum, default_value = "terminal")]
     format: OutputFormat,
     #[arg(short, long)]
     output: Option<PathBuf>,
+    /// Number of largest symbol changes in human-readable reports.
+    #[arg(long, default_value_t = 20)]
+    top: usize,
+    /// Emit a bounded #z= share URL for this viewer (no fragment).
+    #[arg(long)]
+    viewer_url: Option<String>,
 }
 #[derive(Clone, Copy, ValueEnum)]
 enum OutputFormat {
+    Terminal,
+    Markdown,
     Json,
 }
 #[derive(Args)]
@@ -129,10 +138,27 @@ fn run() -> Result<u8> {
 fn run_comparison(args: Comparison, budgets: Option<Budgets>) -> Result<u8> {
     let diff = compare(&load(&args.base)?, &load(&args.head)?)?;
     let gate = budgets.as_ref().map(|b| evaluate(&diff, b)).transpose()?;
+    let share = args
+        .viewer_url
+        .as_deref()
+        .map(|url| share_url(&diff, url))
+        .transpose()?;
     let output = match args.format {
         OutputFormat::Json => {
-            serde_json::to_string_pretty(&serde_json::json!({"diff":diff,"gate":gate}))? + "\n"
+            serde_json::to_string_pretty(
+                &serde_json::json!({"diff":diff,"gate":gate,"share_url":share}),
+            )? + "\n"
         }
+        OutputFormat::Markdown => {
+            report::markdown(&diff, gate.as_ref(), args.top, share.as_deref())
+        }
+        OutputFormat::Terminal => report::terminal(
+            &diff,
+            gate.as_ref(),
+            args.top,
+            share.as_deref(),
+            args.output.is_none(),
+        ),
     };
     write_output(args.output.as_ref(), &output)?;
     Ok(if gate.as_ref().is_some_and(|g| !g.passed) {
