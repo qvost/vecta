@@ -1,0 +1,81 @@
+name: Vecta Self Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# Serialize updates to the same PR's sticky comment.
+concurrency:
+  group: vecta-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Check out PR base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .vecta-base
+          persist-credentials: false
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build base release binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUSTFLAGS="--remap-path-prefix=$GITHUB_WORKSPACE/.vecta-base=." \
+            cargo build --release --locked --bin vecta \
+            --manifest-path "$GITHUB_WORKSPACE/.vecta-base/Cargo.toml" \
+            --target-dir "$RUNNER_TEMP/vecta-base"
+
+      - name: Build head release binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUSTFLAGS="--remap-path-prefix=$GITHUB_WORKSPACE=." \
+            cargo build --release --locked --bin vecta \
+            --manifest-path "$GITHUB_WORKSPACE/Cargo.toml" \
+            --target-dir "$RUNNER_TEMP/vecta-head"
+          printf '%s\n' "$RUNNER_TEMP/vecta-head/release" >> "$GITHUB_PATH"
+
+      - name: Gate Vecta with Vecta
+        id: vecta
+        uses: ./
+        with:
+          base: ${{ runner.temp }}/vecta-base/release/vecta
+          head: ${{ runner.temp }}/vecta-head/release/vecta
+          max-growth: '65536'
+          max-growth-percent: '5'
+          section-budget: |
+            .text=32768
+            .rodata=16384
+          forbid-new-libraries: 'true'
+          max-glibc: '2.39'
+          forbid-abi-bump: 'true'
+          # Fork tokens cannot write PR comments; still enforce all budgets.
+          comment-on-pr: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          github-token: ${{ github.token }}
+
+      - name: Upload Vecta reports
+        if: ${{ always() && steps.vecta.outputs.markdown-report != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vecta-binary-reports
+          path: |
+            ${{ steps.vecta.outputs.markdown-report }}
+            ${{ steps.vecta.outputs.json-report }}
+          if-no-files-found: warn

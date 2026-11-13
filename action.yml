@@ -1,0 +1,207 @@
+name: Vecta Binary Regression Gate
+description: Compare compiled artifacts, enforce size and runtime budgets, and maintain a PR report.
+author: Vecta contributors
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  base:
+    description: Path to the base binary or Vecta JSON snapshot, relative to the caller's workspace.
+    required: true
+  head:
+    description: Path to the head binary or Vecta JSON snapshot, relative to the caller's workspace.
+    required: true
+  max-growth:
+    description: Maximum allowed file growth in bytes, inclusive. Configure at least one budget or policy.
+  max-growth-percent:
+    description: Maximum file growth as a percentage of base file size.
+  section-budget:
+    description: Logical section growth budgets, one SECTION=BYTES entry per line.
+  forbid-new-libraries:
+    description: Reject additional direct dynamic library dependencies (true or false).
+    default: 'false'
+  max-glibc:
+    description: Maximum required GLIBC version, for ELF inputs only.
+  max-glibcxx:
+    description: Maximum required GLIBCXX version, for ELF inputs only.
+  forbid-abi-bump:
+    description: Reject GLIBC or GLIBCXX requirement increases (true or false).
+    default: 'false'
+  viewer-url:
+    description: Viewer URL for the compressed diff; set empty to omit the share URL.
+    default: https://vecta.dev
+  top-symbols:
+    description: Maximum symbol changes shown in the Markdown report.
+    default: '20'
+  comment-on-pr:
+    description: Create or update a sticky report on pull_request events (true or false). Requires pull-requests write permission.
+    default: 'true'
+  github-token:
+    description: GitHub token used only by the PR commenting step.
+    default: ${{ github.token }}
+
+outputs:
+  markdown-report:
+    description: Absolute path to the Markdown report, retained in runner temporary storage.
+    value: ${{ steps.gate.outputs.markdown-report }}
+  json-report:
+    description: Absolute path to the raw JSON gate report, retained in runner temporary storage.
+    value: ${{ steps.gate.outputs.json-report }}
+  gate-exit-code:
+    description: Gate result (0 pass, 1 policy violation, 2 execution or configuration error).
+    value: ${{ steps.gate.outputs.gate-exit-code }}
+  comment-url:
+    description: URL of the created or updated PR comment, when commenting succeeds.
+    value: ${{ steps.comment.outputs.comment-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Vecta CLI
+      id: cli
+      shell: bash
+      env:
+        VECTA_ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        if command -v vecta >/dev/null 2>&1; then
+          executable="$(command -v vecta)"
+        elif [[ -x "$GITHUB_WORKSPACE/target/release/vecta" ]]; then
+          executable="$GITHUB_WORKSPACE/target/release/vecta"
+        elif [[ -x "$VECTA_ACTION_PATH/target/release/vecta" ]]; then
+          executable="$VECTA_ACTION_PATH/target/release/vecta"
+        else
+          build_dir="$(mktemp -d "$RUNNER_TEMP/vecta-build.XXXXXX")"
+          cargo build --release --manifest-path "$VECTA_ACTION_PATH/Cargo.toml" \
+            --target-dir "$build_dir" --bin vecta
+          executable="$build_dir/release/vecta"
+        fi
+        [[ -x "$executable" ]] || { echo '::error::Vecta executable was not found after resolution.'; exit 2; }
+        printf 'executable=%s\n' "$executable" >> "$GITHUB_OUTPUT"
+
+    - name: Generate Vecta gate reports
+      id: gate
+      shell: bash
+      env:
+        VECTA_EXECUTABLE: ${{ steps.cli.outputs.executable }}
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_HEAD: ${{ inputs.head }}
+        INPUT_MAX_GROWTH: ${{ inputs.max-growth }}
+        INPUT_MAX_GROWTH_PERCENT: ${{ inputs.max-growth-percent }}
+        INPUT_SECTION_BUDGET: ${{ inputs.section-budget }}
+        INPUT_FORBID_NEW_LIBRARIES: ${{ inputs.forbid-new-libraries }}
+        INPUT_MAX_GLIBC: ${{ inputs.max-glibc }}
+        INPUT_MAX_GLIBCXX: ${{ inputs.max-glibcxx }}
+        INPUT_FORBID_ABI_BUMP: ${{ inputs.forbid-abi-bump }}
+        INPUT_VIEWER_URL: ${{ inputs.viewer-url }}
+        INPUT_TOP_SYMBOLS: ${{ inputs.top-symbols }}
+        INPUT_COMMENT_ON_PR: ${{ inputs.comment-on-pr }}
+      run: |
+        set -euo pipefail
+        cd "$GITHUB_WORKSPACE"
+        for name in INPUT_FORBID_NEW_LIBRARIES INPUT_FORBID_ABI_BUMP INPUT_COMMENT_ON_PR; do
+          case "${!name}" in
+            true|false) ;;
+            *) printf '::error::%s must be true or false.\n' "$name"; exit 2 ;;
+          esac
+        done
+        [[ -n "$INPUT_BASE" && -n "$INPUT_HEAD" ]] || { echo '::error::Both base and head are required.'; exit 2; }
+        report_dir="$(mktemp -d "$RUNNER_TEMP/vecta-report.XXXXXX")"
+        markdown="$report_dir/report.md"
+        json="$report_dir/report.json"
+        args=(gate)
+        # Use absolute paths so a caller's filename cannot become a CLI option.
+        for input in "$INPUT_BASE" "$INPUT_HEAD"; do
+          case "$input" in
+            /*) args+=("$input") ;;
+            *) args+=("$GITHUB_WORKSPACE/$input") ;;
+          esac
+        done
+        add_optional() { if [[ -n "$2" ]]; then args+=("$1" "$2"); fi; }
+        add_optional --max-growth "$INPUT_MAX_GROWTH"
+        add_optional --max-growth-percent "$INPUT_MAX_GROWTH_PERCENT"
+        add_optional --max-glibc "$INPUT_MAX_GLIBC"
+        add_optional --max-glibcxx "$INPUT_MAX_GLIBCXX"
+        add_optional --viewer-url "$INPUT_VIEWER_URL"
+        args+=(--top "$INPUT_TOP_SYMBOLS")
+        while IFS= read -r budget || [[ -n "$budget" ]]; do
+          budget="${budget#"${budget%%[![:space:]]*}"}"
+          budget="${budget%"${budget##*[![:space:]]}"}"
+          [[ -n "$budget" ]] && args+=(--section-budget "$budget")
+        done <<< "$INPUT_SECTION_BUDGET"
+        if [[ "$INPUT_FORBID_NEW_LIBRARIES" == true ]]; then args+=(--forbid-new-libraries); fi
+        if [[ "$INPUT_FORBID_ABI_BUMP" == true ]]; then args+=(--forbid-abi-bump); fi
+
+        # Vecta emits one format per invocation. Preserve failures while capturing both.
+        markdown_status=0
+        "$VECTA_EXECUTABLE" "${args[@]}" --format markdown --output "$markdown" || markdown_status=$?
+        json_status=0
+        "$VECTA_EXECUTABLE" "${args[@]}" --format json --output "$json" || json_status=$?
+        if (( markdown_status > 1 || json_status > 1 || markdown_status != json_status )); then
+          status=2
+          echo '::error::Vecta could not produce consistent gate reports. See the CLI diagnostics above.'
+        else
+          status="$markdown_status"
+        fi
+        printf 'markdown-report=%s\njson-report=%s\ngate-exit-code=%s\n' \
+          "$markdown" "$json" "$status" >> "$GITHUB_OUTPUT"
+        if [[ -s "$markdown" ]]; then
+          cat "$markdown" >> "$GITHUB_STEP_SUMMARY"
+        else
+          printf '## Vecta\n\nGate execution failed (exit %s). See the workflow logs.\n' "$status" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Maintain sticky PR comment
+      id: comment
+      if: ${{ inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' && steps.gate.outputs.gate-exit-code != '' }}
+      continue-on-error: true
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        MARKDOWN_REPORT: ${{ steps.gate.outputs.markdown-report }}
+        GATE_EXIT_CODE: ${{ steps.gate.outputs.gate-exit-code }}
+      run: |
+        set -euo pipefail
+        command -v gh >/dev/null 2>&1 || { echo '::warning::gh is unavailable; skipping the PR comment.'; exit 0; }
+        [[ -s "$MARKDOWN_REPORT" ]] || { echo '::warning::No Markdown report was generated; skipping the PR comment.'; exit 0; }
+        [[ "$GATE_EXIT_CODE" != 2 ]] || { echo '::warning::Gate execution failed; skipping the PR comment.'; exit 0; }
+        body="$(dirname "$MARKDOWN_REPORT")/comment.md"
+        {
+          printf '<!-- vecta:gate-report -->\n\n'
+          cat "$MARKDOWN_REPORT"
+        } > "$body"
+        # Search every page, including PRs with more than 100 comments.
+        if ! matches="$(gh api --paginate "repos/$GH_REPO/issues/$PR_NUMBER/comments?per_page=100" \
+          --jq '.[] | select((.body // "") | contains("<!-- vecta:gate-report -->")) | .id')"; then
+          echo '::warning::Could not read PR comments. Check token permissions; the gate result is unchanged.'
+          exit 0
+        fi
+        comment_id="${matches%%$'\n'*}"
+        if [[ -n "$comment_id" ]]; then
+          endpoint="repos/$GH_REPO/issues/comments/$comment_id"
+          method=PATCH
+        else
+          endpoint="repos/$GH_REPO/issues/$PR_NUMBER/comments"
+          method=POST
+        fi
+        if ! url="$(gh api --method "$method" "$endpoint" --field "body=@$body" --jq '.html_url')"; then
+          echo '::warning::Could not write the PR comment. Fork PRs may have read-only tokens; the gate result is unchanged.'
+          exit 0
+        fi
+        printf 'comment-url=%s\n' "$url" >> "$GITHUB_OUTPUT"
+
+    - name: Enforce Vecta gate result
+      if: ${{ always() && steps.gate.outputs.gate-exit-code != '' }}
+      shell: bash
+      env:
+        GATE_EXIT_CODE: ${{ steps.gate.outputs.gate-exit-code }}
+      run: |
+        set -euo pipefail
+        case "$GATE_EXIT_CODE" in
+          0) echo 'Vecta gate passed.' ;;
+          1) echo '::error::Vecta binary regression budget violated.'; exit 1 ;;
+          *) echo '::error::Vecta gate execution failed.'; exit 2 ;;
+        esac
