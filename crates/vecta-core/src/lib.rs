@@ -1,6 +1,10 @@
 //! Binary snapshots, deterministic comparisons, and CI budgets.
+mod diff;
 mod elf_versions;
+mod gate;
 mod inspect;
+pub use diff::*;
+pub use gate::*;
 pub use inspect::*;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
