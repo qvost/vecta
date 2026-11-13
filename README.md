@@ -1,64 +1,70 @@
-# ◈ Vecta
+# Vecta
 
 [![CI](https://github.com/qvost/vecta/actions/workflows/ci.yml/badge.svg)](https://github.com/qvost/vecta/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
-[![Live Viewer](https://img.shields.io/badge/web%20viewer-vecta--gate.vercel.app-ffae00.svg)](https://vecta-gate.vercel.app)
+[![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue.svg)](LICENSE-MIT)
+[![Web Viewer](https://img.shields.io/badge/viewer-vecta--gate.vercel.app-informational.svg)](https://vecta-gate.vercel.app)
 
-> **Binary regression profiler and ABI gatekeeper for compiled software (C, C++, Rust, Zig, Go).**
+Binary regression profiler and ABI gatekeeper for compiled software (C, C++, Rust, Zig, Go).
 
-Git pull requests show line-by-line source changes, but hide what happens to your compiled artifact. A single dependency update or compiler flag change can silently bloat `.text` by megabytes, accidentally vendor OpenSSL statically, or bump your minimum required GLIBC version so production binaries crash on older Linux servers.
+Source diffs in pull requests show line-by-line changes, but hide compiled artifact regressions. Compiler flag adjustments, dependency bumps, or template instantiations can silently bloat code sections, introduce unexpected dynamic library dependencies, or raise the minimum required GLIBC version.
 
-**Vecta** inspects compiled binaries (ELF, Mach-O, PE), calculates exact section and demangled symbol deltas, tracks dynamic libraries, and enforces strict CI regression gates with shareable visual diffs.
+Vecta inspects compiled binaries (ELF, Mach-O, PE), extracts section sizes and demangled symbols, tracks runtime requirements, and acts as a CI quality gate with shareable, client-side visual reports.
 
 ---
 
-## ⚡ Quick Start
+## Installation
 
-### 1. Installation
+### Building from source
 
-Build and install the static Rust CLI:
+Prerequisites: Rust 1.75+ with Cargo.
 
 ```sh
-# Clone and install globally into ~/.cargo/bin
 git clone https://github.com/qvost/vecta.git
 cd vecta
 cargo install --path crates/vecta-cli
 ```
 
-*(Ensure `~/.cargo/bin` is in your `$PATH`)*
+This builds and installs the `vecta` binary into `~/.cargo/bin`.
 
 ---
 
-## 🛠️ CLI Usage
-
-Vecta operates through three core commands:
+## CLI Usage
 
 ### `vecta inspect`
-Dissects a binary and generates a deterministic, machine-readable JSON snapshot:
+
+Generates a deterministic JSON snapshot of a binary's internal structure:
+
 ```sh
-vecta inspect ./target/release/my-app --output base.json
+vecta inspect ./target/release/app --output base.json
 ```
-- Extracts sections (`.text`, `.rodata`, `.data`, `.bss`).
-- Demangles Rust and C++ symbols without shelling out to `nm` or `c++filt`.
-- Records dynamic library dependencies (`DT_NEEDED` on ELF, `LC_LOAD_DYLIB` on Mach-O, PE import tables).
-- Detects the exact minimum required GLIBC / GLIBCXX runtime versions from `.gnu.version_r`.
+
+- Analyzes sections (`.text`, `.rodata`, `.data`, `.bss`).
+- Demangles Rust and Itanium C++ symbols without external tools (`nm`, `objdump`, `c++filt`).
+- Records direct dynamic dependencies (`DT_NEEDED` on ELF, `LC_LOAD_DYLIB` on Mach-O, PE imports).
+- Extracts minimum required GLIBC and GLIBCXX version requirements from `.gnu.version_r` records on Linux ELF binaries.
 
 ### `vecta diff`
-Compares two binaries, two JSON snapshots, or one of each:
-```sh
-# Print a colored terminal diff
-vecta diff base.json ./target/release/my-app
 
-# Generate GitHub-flavored Markdown with a live web viewer URL
-vecta diff base.json ./target/release/my-app \
+Compares two binaries, two JSON snapshots, or one of each:
+
+```sh
+# Human-readable terminal table
+vecta diff base.json ./target/release/app
+
+# Generate GitHub-flavored Markdown with a shareable viewer link
+vecta diff base.json ./target/release/app \
   --format markdown \
   --viewer-url "https://vecta-gate.vercel.app"
 ```
 
+Supported output formats: `terminal` (default), `markdown`, and `json`.
+
 ### `vecta gate`
-Runs as an automated CI quality gate. Evaluates diffs against strict budgets and **exits with code 0 on pass or code 1 on violation**:
+
+Evaluates binary differences against configured budgets and returns standard CI exit codes:
+
 ```sh
-vecta gate base.json ./target/release/my-app \
+vecta gate base.json ./target/release/app \
   --max-growth 65536 \
   --section-budget .text=32768 \
   --forbid-new-libraries \
@@ -67,30 +73,30 @@ vecta gate base.json ./target/release/my-app \
   --output report.md
 ```
 
+Exit status:
+- `0`: All policy checks passed.
+- `1`: One or more policies were violated.
+- `2`: Malformed input, unsupported architecture, or configuration error.
+
 ---
 
-## 🛡️ Policy Gate Flags
+## Policy Options
 
-| Flag | Policy Description |
+| Option | Description |
 |---|---|
-| `--max-growth <BYTES>` | Maximum total binary growth in bytes |
-| `--max-growth-percent <PERCENT>` | Maximum binary growth relative to the base file (e.g. `5.0` for 5%) |
-| `--section-budget <NAME=BYTES>` | Per-section growth budget (e.g. `--section-budget .text=4096`; repeat for multiple) |
-| `--forbid-new-libraries` | Fails if any new direct dynamic library (`DT_NEEDED`, dylib, DLL) is introduced |
-| `--max-glibc <VERSION>` | Fails if head requires a GLIBC version higher than allowed (e.g. `2.31`) |
-| `--max-glibcxx <VERSION>` | Fails if head requires a GLIBCXX version higher than allowed |
-| `--forbid-abi-bump` | Fails if any required runtime version increased relative to base |
-
-**Exit Codes:**
-- `0`: All policies passed.
-- `1`: Policy violation detected (budget exceeded, forbidden library added, etc.).
-- `2`: Invalid arguments, unsupported binary format, or I/O failure.
+| `--max-growth <BYTES>` | Maximum allowed file size growth in bytes |
+| `--max-growth-percent <PERCENT>` | Maximum file size growth as a percentage of the base file |
+| `--section-budget <NAME=BYTES>` | Per-section growth budget (e.g., `--section-budget .text=4096`; repeat for multiple sections) |
+| `--forbid-new-libraries` | Reject addition of any new direct dynamic library dependencies |
+| `--max-glibc <VERSION>` | Cap the head binary's minimum required GLIBC version (ELF only) |
+| `--max-glibcxx <VERSION>` | Cap the head binary's minimum required GLIBCXX version (ELF only) |
+| `--forbid-abi-bump` | Reject any increase in GLIBC or GLIBCXX version requirements |
 
 ---
 
-## 🤖 Official GitHub Action
+## GitHub Action
 
-You can add Vecta directly to your repository's PR checks using our official composite action:
+Vecta provides a composite action for CI workflows. It runs `vecta gate` against your build artifacts and automatically creates or updates a sticky comment on the pull request:
 
 ```yaml
 name: Binary Regression Gate
@@ -107,7 +113,7 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR head
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           path: head
@@ -118,16 +124,16 @@ jobs:
           ref: ${{ github.base_ref }}
           path: base
 
-      - name: Setup Rust / Build Binaries
+      - name: Build binaries
         run: |
           cd base && cargo build --release
           cd ../head && cargo build --release
 
-      - name: Run Vecta Gate
+      - name: Evaluate regression gate
         uses: qvost/vecta@main
         with:
-          base: base/target/release/my-app
-          head: head/target/release/my-app
+          base: base/target/release/app
+          head: head/target/release/app
           max-growth-percent: 10.0
           forbid-new-libraries: "true"
           max-glibc: "2.31"
@@ -136,27 +142,18 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-When enabled, Vecta will automatically create or update a **sticky PR comment** containing the full Markdown diff table, status badges, and a direct link to the visual viewer.
-
 ---
 
-## 🌐 The Web Viewer (`#z=` Zero-Backend Architecture)
+## Web Viewer
 
-Explore the live web viewer at **[vecta-gate.vercel.app](https://vecta-gate.vercel.app)**.
+A live instance of the visual diff explorer is available at [vecta-gate.vercel.app](https://vecta-gate.vercel.app).
 
-```
-[vecta diff] ──(Deflate + Base64URL)──► URL Hash: https://vecta-gate.vercel.app#z=...
-                                                            │
-                                              [Browser Client Decompression]
-                                                            │
-                                              [Interactive 60fps Visualizer]
-```
+The viewer operates entirely client-side:
+- When `--viewer-url` is passed to `vecta diff` or `vecta gate`, the CLI compresses a diff summary using raw DEFLATE, base64url-encodes it, and appends it as a `#z=` URL hash.
+- The browser decompresses the hash using `DecompressionStream`.
+- No server-side database or storage is involved; binary metadata is never transmitted to the host.
 
-- **Zero Database / Zero Cloud Writes:** The diff summary is compressed using DEFLATE and encoded directly into the `#z=` URL fragment.
-- **Privacy by Design:** URL hashes are never sent over the network to the server; your symbol names and memory addresses are decoded purely client-side inside the browser.
-- **Editorial Motion Design:** Built with Vite, GSAP, Lenis momentum scrolling, Bellefair typography, and responsive scroll-pinned section cards.
-
-### Running the Web Viewer Locally
+### Running locally
 
 ```sh
 cd web
@@ -164,40 +161,26 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+---
+
+## Technical Notes
+
+- **Symbol attribution:** Stripped binaries lack static symbol tables (`.symtab`). Vecta falls back to dynamic symbols (`.dynsym`) and flags the report with a warning. For full attribution, run `vecta inspect` before running `strip`.
+- **Logical vs. physical sizes:** Section budgets evaluate logical memory sizes, ensuring `.bss` changes are accounted for even when they occupy zero file bytes.
+- **GLIBC extraction:** Version requirements are read directly from `SHT_GNU_VERNEED` sections in ELF binaries, extracting numeric version records without string matching heuristics.
 
 ---
 
-## 📂 Repository Structure
+## Workspace Layout
 
-- `crates/vecta-core`: Pure Rust binary parsing, symbol demangling, ABI extraction, diff calculation, and `#z=` compression.
-- `crates/vecta-cli`: CLI interface (`vecta`), formatting terminal tables, Markdown reports, and exit code handling.
-- `web/`: Motion-led static visual diff explorer deployed on Vercel.
-- `action.yml`: Composite GitHub Action for CI gating and sticky PR comments.
-- `scripts/smoke.py`: End-to-end integration test suite against real C binaries and `readelf`.
-
----
-
-## 🧪 Testing & Validation
-
-```sh
-# Run code formatting and clippy checks
-cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
-
-# Run all unit and integration test suites
-cargo test --workspace
-
-# Run web viewer payload tests
-cd web && node --test
-```
+- `crates/vecta-core`: Parsing engine, symbol demangling, ABI extraction, diff calculation, and compression.
+- `crates/vecta-cli`: CLI interface, table formatting, and exit code handling.
+- `web/`: Client-side visual diff viewer (Vite, GSAP, Lenis).
+- `action.yml`: Composite GitHub Action definition.
+- `scripts/smoke.py`: Integration test harness against real compiled binaries.
 
 ---
 
-## 📜 License
+## License
 
-Licensed under either of:
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
-- MIT License ([LICENSE-MIT](LICENSE-MIT))
-
-at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT License](LICENSE-MIT) at your option.
