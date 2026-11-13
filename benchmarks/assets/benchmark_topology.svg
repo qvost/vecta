@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="900" viewBox="0 0 1800 900" role="img" aria-labelledby="title desc"><title id="title">Binary footprint dissection</title><desc id="desc">bash 1,195 KiB to zsh 971 KiB. Reported net file reduction 223.3 KiB (18.7%). BSS is zero-initialized runtime storage, not file bytes.</desc><rect width="1800" height="900" fill="white"/><g font-family="Times New Roman, Liberation Serif, serif" fill="black" font-size="30">
+<text x="170" y="65" font-size="36" text-anchor="start" >Section size change: /bin/zsh − /bin/bash</text>
+<path d="M266.66666666666663,130 L266.66666666666663,660" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="266.66666666666663" y="710" font-size="30" text-anchor="middle" >-80</text>
+<path d="M400.0,130 L400.0,660" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="400.0" y="710" font-size="30" text-anchor="middle" >-60</text>
+<path d="M533.3333333333334,130 L533.3333333333334,660" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="533.3333333333334" y="710" font-size="30" text-anchor="middle" >-40</text>
+<path d="M666.6666666666667,130 L666.6666666666667,660" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="666.6666666666667" y="710" font-size="30" text-anchor="middle" >-20</text>
+<path d="M800.0,130 L800.0,660" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="800.0" y="710" font-size="30" text-anchor="middle" >0</text>
+<path d="M933.3333333333333,130 L933.3333333333333,660" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="933.3333333333333" y="710" font-size="30" text-anchor="middle" >20</text>
+<path d="M800,210 L292.66666666666674,210" fill="none" stroke="#c73529" stroke-width="4"/>
+<circle cx="292.66666666666674" cy="210" r="9" fill="#c73529"/>
+<text x="175" y="220" font-size="32" text-anchor="end" >.text</text>
+<text x="272.66666666666674" y="188" font-size="28" text-anchor="end" >-76.1 KiB</text>
+<path d="M800,335 L348.0,335" fill="none" stroke="#c73529" stroke-width="4"/>
+<circle cx="348.0" cy="335" r="9" fill="#c73529"/>
+<text x="175" y="345" font-size="32" text-anchor="end" >.rodata</text>
+<text x="328.0" y="313" font-size="28" text-anchor="end" >-67.8 KiB</text>
+<path d="M800,460 L667.3333333333333,460" fill="none" stroke="#c73529" stroke-width="4"/>
+<circle cx="667.3333333333333" cy="460" r="9" fill="#c73529"/>
+<text x="175" y="470" font-size="32" text-anchor="end" >.dynsym</text>
+<text x="647.3333333333333" y="438" font-size="28" text-anchor="end" >-19.9 KiB</text>
+<path d="M800,585 L912.0,585" fill="none" stroke="#3088bf" stroke-width="4"/>
+<rect x="903.0" y="576" width="18" height="18" fill="#3088bf"/>
+<text x="175" y="595" font-size="32" text-anchor="end" >.bss</text>
+<text x="932.0" y="563" font-size="28" text-anchor="start" >+16.8 KiB</text>
+<rect x="200" y="130" width="800" height="530" fill="none" stroke="black" stroke-width="1.4"/>
+<path d="M800,130 L800,660" fill="none" stroke="black" stroke-width="1.5"/>
+<text x="600" y="770" font-size="36" text-anchor="middle" >section delta (KiB)</text>
+<text x="1090" y="160" font-size="34" text-anchor="start" >Total file footprint</text>
+<text x="1090" y="220" font-size="32" text-anchor="start" >bash     1,195 KiB</text>
+<text x="1090" y="270" font-size="32" text-anchor="start" >zsh         971 KiB</text>
+<text x="1090" y="340" font-size="38" text-anchor="start" >−223.3 KiB (−18.7%)</text>
+<text x="1090" y="440" font-size="34" text-anchor="start" >Dynamic library changes</text>
+<text x="1090" y="500" font-size="28" text-anchor="start" >Added: libcap, libncursesw, libm</text>
+<text x="1090" y="550" font-size="28" text-anchor="start" >Removed: libreadline</text>
+<text x="1090" y="650" font-size="30" text-anchor="start" >GLIBC 2.38 baseline match</text>
+<path d="M1080,180 L1720,180" fill="none" stroke="black" stroke-width="1.5"/>
+<path d="M1080,375 L1720,375" fill="none" stroke="black" stroke-width="1.5"/>
+<path d="M1080,465 L1720,465" fill="none" stroke="black" stroke-width="1.5"/>
+<path d="M1080,580 L1720,580" fill="none" stroke="black" stroke-width="1.5"/>
+<path d="M1080,680 L1720,680" fill="none" stroke="black" stroke-width="1.5"/>
+<text x="200" y="835" font-size="26" text-anchor="start" >.bss is runtime storage; selected section deltas do not sum to the file reduction.</text>
+<text x="200" y="875" font-size="24" text-anchor="start" >File totals are rounded; the net delta is reported from the supplied measurements.</text>
+</g></svg>

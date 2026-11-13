@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="900" viewBox="0 0 1800 900" role="img" aria-labelledby="title desc"><title id="title">Zero-backend URL scaling</title><desc id="desc">DEFLATE plus Base64URL #z= diff payload. URL lengths approximately 1,100, 3,800, 5,900 and 6,800 characters; safety ceiling 8,000 characters.</desc><rect width="1800" height="900" fill="white"/><g font-family="Times New Roman, Liberation Serif, serif" fill="black" font-size="30">
+<path d="M190,65 L250,65" fill="none" stroke="#c73529" stroke-width="4"/>
+<circle cx="220" cy="65" r="9" fill="#c73529"/>
+<text x="268" y="75" font-size="30" text-anchor="start" >DEFLATE + Base64URL #z=</text>
+<path d="M900,65 L960,65" fill="none" stroke="black" stroke-width="1.5" stroke-dasharray="12 10"/>
+<text x="980" y="75" font-size="30" text-anchor="start" >8,000-character safety limit</text>
+<path d="M170,660.0 L1090,660.0" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="150" y="670.0" font-size="28" text-anchor="end" >0</text>
+<path d="M170,544.4444444444445 L1090,544.4444444444445" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="150" y="554.4444444444445" font-size="28" text-anchor="end" >2,000</text>
+<path d="M170,428.8888888888889 L1090,428.8888888888889" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="150" y="438.8888888888889" font-size="28" text-anchor="end" >4,000</text>
+<path d="M170,313.33333333333337 L1090,313.33333333333337" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="150" y="323.33333333333337" font-size="28" text-anchor="end" >6,000</text>
+<path d="M170,197.77777777777783 L1090,197.77777777777783" fill="none" stroke="#cccccc" stroke-width="1"/>
+<text x="150" y="207.77777777777783" font-size="28" text-anchor="end" >8,000</text>
+<path d="M170,197.77777777777783 L1090,197.77777777777783" fill="none" stroke="black" stroke-width="1.5" stroke-dasharray="12 10"/>
+<rect x="170" y="140" width="920" height="520" fill="none" stroke="black" stroke-width="1.4"/>
+<path d="M204.07407407407408,596.4444444444445 L340.3703703703703,440.44444444444446" fill="none" stroke="#c73529" stroke-width="4"/>
+<path d="M340.3703703703703,440.44444444444446 L510.7407407407407,319.1111111111111" fill="none" stroke="#c73529" stroke-width="4"/>
+<path d="M510.7407407407407,319.1111111111111 L1021.8518518518518,267.11111111111114" fill="none" stroke="#c73529" stroke-width="4"/>
+<circle cx="204.07407407407408" cy="596.4444444444445" r="9" fill="#c73529"/>
+<text x="204.07407407407408" y="573.4444444444445" font-size="28" text-anchor="middle" >1.1k</text>
+<path d="M204.07407407407408,660 L204.07407407407408,645" fill="none" stroke="black" stroke-width="1"/>
+<text x="204.07407407407408" y="707" font-size="30" text-anchor="middle" >10</text>
+<circle cx="340.3703703703703" cy="440.44444444444446" r="9" fill="#c73529"/>
+<text x="340.3703703703703" y="417.44444444444446" font-size="28" text-anchor="middle" >3.8k</text>
+<path d="M340.3703703703703,660 L340.3703703703703,645" fill="none" stroke="black" stroke-width="1"/>
+<text x="340.3703703703703" y="707" font-size="30" text-anchor="middle" >50</text>
+<circle cx="510.7407407407407" cy="319.1111111111111" r="9" fill="#c73529"/>
+<text x="510.7407407407407" y="296.1111111111111" font-size="28" text-anchor="middle" >5.9k</text>
+<path d="M510.7407407407407,660 L510.7407407407407,645" fill="none" stroke="black" stroke-width="1"/>
+<text x="510.7407407407407" y="707" font-size="30" text-anchor="middle" >100</text>
+<circle cx="1021.8518518518518" cy="267.11111111111114" r="9" fill="#c73529"/>
+<text x="1021.8518518518518" y="244.11111111111114" font-size="28" text-anchor="middle" >6.8k</text>
+<path d="M1021.8518518518518,660 L1021.8518518518518,645" fill="none" stroke="black" stroke-width="1"/>
+<text x="1021.8518518518518" y="707" font-size="30" text-anchor="middle" >250</text>
+<text x="630" y="775" font-size="36" text-anchor="middle" >diff size (symbols)</text>
+<text x="55" y="400" font-size="35" text-anchor="middle" transform="rotate(-90 55 400)">encoded URL length (characters)</text>
+<text x="1170" y="230" font-size="29" text-anchor="middle" >Symbols</text>
+<text x="1360" y="230" font-size="29" text-anchor="middle" >Raw KB</text>
+<text x="1520" y="230" font-size="29" text-anchor="middle" >URL KB</text>
+<text x="1690" y="230" font-size="29" text-anchor="middle" >Saved</text>
+<path d="M1125,185 L1760,185" fill="none" stroke="black" stroke-width="2"/>
+<path d="M1125,250 L1760,250" fill="none" stroke="black" stroke-width="2"/>
+<path d="M1125,565 L1760,565" fill="none" stroke="black" stroke-width="2"/>
+<text x="1170" y="310" font-size="30" text-anchor="middle" >10</text>
+<text x="1360" y="310" font-size="30" text-anchor="middle" >12.4</text>
+<text x="1520" y="310" font-size="30" text-anchor="middle" >1.1</text>
+<text x="1690" y="310" font-size="30" text-anchor="middle" >91.1%</text>
+<text x="1170" y="380" font-size="30" text-anchor="middle" >50</text>
+<text x="1360" y="380" font-size="30" text-anchor="middle" >48.2</text>
+<text x="1520" y="380" font-size="30" text-anchor="middle" >3.8</text>
+<text x="1690" y="380" font-size="30" text-anchor="middle" >92.1%</text>
+<text x="1170" y="450" font-size="30" text-anchor="middle" >100</text>
+<text x="1360" y="450" font-size="30" text-anchor="middle" >89.6</text>
+<text x="1520" y="450" font-size="30" text-anchor="middle" >5.9</text>
+<text x="1690" y="450" font-size="30" text-anchor="middle" >93.4%</text>
+<text x="1170" y="520" font-size="30" text-anchor="middle" >250</text>
+<text x="1360" y="520" font-size="30" text-anchor="middle" >184</text>
+<text x="1520" y="520" font-size="30" text-anchor="middle" >6.8</text>
+<text x="1690" y="520" font-size="30" text-anchor="middle" >96.3%</text>
+<text x="1140" y="625" font-size="27" text-anchor="start" >Raw diff JSON → shareable #z= payload</text>
+<text x="170" y="845" font-size="26" text-anchor="start" >URL values use decimal k (1k ≈ 1,000 characters); percentages denote size reduction.</text>
+</g></svg>
