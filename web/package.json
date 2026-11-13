@@ -1,0 +1,9 @@
+{
+  "name": "vecta-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev": "vite --host 0.0.0.0", "build": "vite build", "preview": "vite preview", "test": "node --test"},
+  "dependencies": {"gsap": "^3.12.5", "lenis": "^1.1.20", "@fontsource/bellefair": "^5.1.0", "@fontsource/dm-mono": "^5.1.0"},
+  "devDependencies": {"vite": "^6.1.0"}
+}
